@@ -557,9 +557,7 @@ function generateRecommendations(analysis) {
 
   const singleFront = frontRanked.slice(0, 5).sort((a,b) => a-b);
   const singleBack = backRanked.slice(0, 2).sort((a,b) => a-b);
-  // 计算 7 个号码的平均评分
-  const allScores = [...singleFront.map(n => scoresFront[n]), ...singleBack.map(n => scoresBack[n])];
-  const avgScore = (allScores.reduce((a, b) => a + b, 0) / allScores.length).toFixed(1);
+  const topScore = (scoresFront[frontRanked[0]] + scoresBack[backRanked[0]]).toFixed(1);
 
   // 复式推荐：3套方案
   const compounds = [
@@ -590,7 +588,7 @@ function generateRecommendations(analysis) {
     }
   ];
 
-  return { singleFront, singleBack, avgScore, compounds };
+  return { singleFront, singleBack, topScore, compounds };
 }
 
 // ==================== 计算投注金额 ====================
@@ -627,7 +625,7 @@ function renderRecommend() {
   html += `<span class="divider">+</span>`;
   rec.singleBack.forEach(n => { html += `<span class="ball back">${String(n).padStart(2,'0')}</span>`; });
   html += `</div>
-    <div class="score-badge">平均评分 ${rec.avgScore} 分 · 基于近 ${actualRange} 期数据</div>
+    <div class="score-badge">综合评分 ${rec.topScore} 分 · 基于近 ${actualRange} 期数据</div>
     <div style="font-size:.75rem;color:var(--text2);margin-top:6px">前区 ${rec.singleFront.join(' ')} ｜ 后区 ${rec.singleBack.join(' ')}</div>
   </div>`;
 
@@ -785,7 +783,7 @@ async function runAIAnalysis() {
 【基础规则】前区5/35 + 后区2/12，每周一、三、六开奖。
 
 【推荐号码】
-- 单式推荐：前区 [${rec.singleFront.join(' ')}] + 后区 [${rec.singleBack.join(' ')}]（平均评分 ${rec.avgScore}）
+- 单式推荐：前区 [${rec.singleFront.join(' ')}] + 后区 [${rec.singleBack.join(' ')}]（综合评分 ${rec.topScore}）
 - 热号优先复式：前区 [${rec.compounds[0].front.join(' ')}] + 后区 [${rec.compounds[0].back.join(' ')}]
 - 冷热均衡复式：前区 [${rec.compounds[1].front.join(' ')}] + 后区 [${rec.compounds[1].back.join(' ')}]
 - 遗漏追击复式：前区 [${rec.compounds[2].front.join(' ')}] + 后区 [${rec.compounds[2].back.join(' ')}]
