@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>大乐透智能分析投注助手</title>
+<style>
+/* ========== CSS Reset & Variables ========== */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --red:#d4243c;--red-dark:#b01e32;--gold:#c8963e;--gold-light:#f5e6cc;
+  --bg:#f5f3f0;--card:#fff;--text:#2c2c2c;--text2:#666;--border:#e0dcd5;
+  --front-color:#d4243c;--back-color:#1a6fb5;--shadow:0 2px 12px rgba(0,0,0,.08);
+  --radius:12px;--radius-sm:8px;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);line-height:1.6;min-height:100vh}
+/* ========== Header ========== */
+.header{background:linear-gradient(135deg,#c1272d 0%,#a01d25 40%,#8b1a1f 100%);color:#fff;padding:16px 20px;text-align:center;position:sticky;top:0;z-index:100;box-shadow:0 2px 16px rgba(180,30,40,.3)}
+.header h1{font-size:1.3rem;font-weight:700;letter-spacing:1px}
+.header .sub{font-size:.75rem;opacity:.85;margin-top:2px}
+.header .period{display:inline-block;background:rgba(255,255,255,.18);border-radius:20px;padding:4px 14px;font-size:.8rem;margin-top:6px}
+/* ========== Main Container ========== */
+.container{max-width:720px;margin:0 auto;padding:16px}
+/* ========== Tabs ========== */
+.tabs{display:flex;background:var(--card);border-radius:var(--radius);padding:4px;margin-bottom:16px;box-shadow:var(--shadow);position:sticky;top:108px;z-index:50}
+.tab{flex:1;text-align:center;padding:10px 8px;border-radius:calc(var(--radius) - 4px);cursor:pointer;font-size:.85rem;font-weight:600;color:var(--text2);transition:all .2s;border:none;background:none}
+.tab.active{background:var(--red);color:#fff;box-shadow:0 2px 8px rgba(212,36,60,.35)}
+/* ========== Panel ========== */
+.panel{display:none}
+.panel.active{display:block}
+/* ========== Cards ========== */
+.card{background:var(--card);border-radius:var(--radius);padding:20px;margin-bottom:14px;box-shadow:var(--shadow)}
+.card h3{font-size:1rem;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.card h3 .icon{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.85rem}
+.icon-red{background:#fde8eb;color:var(--red)}.icon-blue{background:#e4f0f9;color:var(--back-color)}.icon-gold{background:var(--gold-light);color:var(--gold)}
+/* ========== Number Ball ========== */
+.ball{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:50%;font-weight:700;font-size:1rem;color:#fff;margin:3px}
+.ball.front{background:linear-gradient(135deg,#e63946,#c1272d);box-shadow:0 3px 8px rgba(198,39,45,.35)}
+.ball.back{background:linear-gradient(135deg,#2b8fd9,#1a6fb5);box-shadow:0 3px 8px rgba(26,111,181,.35)}
+.ball.sm{width:32px;height:32px;font-size:.8rem}
+/* ========== Recommendation Hero ========== */
+.hero-rec{background:linear-gradient(135deg,#fffdf7,#fff9ed);border:2px solid var(--gold);border-radius:var(--radius);padding:20px;text-align:center;margin-bottom:14px}
+.hero-rec .label{font-size:.85rem;color:var(--gold);font-weight:700;letter-spacing:2px;margin-bottom:12px}
+.hero-rec .numbers{display:flex;justify-content:center;align-items:center;gap:6px;flex-wrap:wrap;margin:8px 0}
+.hero-rec .divider{font-weight:700;color:var(--text2);font-size:1.2rem;margin:0 4px}
+.hero-rec .score-badge{display:inline-block;background:var(--gold-light);color:#8b6914;padding:3px 12px;border-radius:12px;font-size:.75rem;font-weight:600;margin-top:8px}
+/* ========== Compound Betting ========== */
+.compound-card{border-left:4px solid var(--red)}
+.compound-card .tag{display:inline-block;font-size:.7rem;padding:2px 8px;border-radius:10px;font-weight:600;margin-right:6px}
+.tag-hot{background:#fde8eb;color:#c1272d}.tag-mix{background:#e8f0fb;color:#2563eb}.tag-cold{background:#e6f0e6;color:#2d7a2d}
+.cost-badge{display:inline-block;background:#f0ede6;padding:3px 10px;border-radius:10px;font-size:.75rem;color:var(--text2);margin-top:8px}
+/* ========== Stats Grid ========== */
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(44px,1fr));gap:6px}
+.stat-item{text-align:center}
+.stat-item .freq-bar{width:100%;height:4px;background:#eee;border-radius:2px;margin-top:2px;overflow:hidden}
+.stat-item .freq-bar .fill{height:100%;border-radius:2px}
+.fill-hot{background:var(--red)}.fill-warm{background:var(--gold)}.fill-cool{background:var(--back-color)}
+.stat-item .num{font-size:.75rem;font-weight:600}
+.stat-item .count{font-size:.65rem;color:var(--text2)}
+/* ========== Missing List ========== */
+.missing-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)}
+.missing-row:last-child{border-bottom:none}
+.missing-row .pos{font-size:.75rem;color:var(--text2);width:24px}
+/* ========== History Table ========== */
+.history-table{width:100%;font-size:.8rem;border-collapse:collapse}
+.history-table th{background:#f8f6f2;padding:8px 6px;text-align:center;font-weight:600;color:var(--text2);position:sticky;top:0}
+.history-table td{text-align:center;padding:8px 4px;border-bottom:1px solid var(--border)}
+.history-table .ball-row{display:flex;justify-content:center;gap:3px;flex-wrap:wrap}
+/* ========== Chart Bars ========== */
+.chart-container{padding:10px 0}
+.chart-row{display:flex;align-items:center;margin:4px 0;gap:8px}
+.chart-row .chart-label{width:24px;text-align:right;font-size:.7rem;font-weight:600;color:var(--text2);flex-shrink:0}
+.chart-row .chart-bar-wrap{flex:1;height:22px;background:#eee;border-radius:4px;overflow:hidden;position:relative}
+.chart-row .chart-bar-fill{height:100%;border-radius:4px;transition:width .5s}
+.chart-row .chart-val{width:32px;font-size:.7rem;color:var(--text2);flex-shrink:0;text-align:left}
+/* ========== AI Section ========== */
+.ai-section{border:2px dashed #c8963e;border-radius:var(--radius);padding:16px;margin-top:14px;background:#fffef9}
+.ai-section h4{font-size:.85rem;color:var(--gold);margin-bottom:8px}
+.ai-section textarea{width:100%;height:60px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px;font-size:.8rem;resize:vertical;font-family:monospace}
+.ai-section .btn-row{display:flex;gap:8px;margin-top:8px}
+.ai-output{background:#fafaf8;border-radius:var(--radius-sm);padding:12px;font-size:.8rem;line-height:1.7;margin-top:10px;white-space:pre-wrap;max-height:400px;overflow-y:auto}
+.ai-output.loading{color:var(--text2);font-style:italic}
+/* ========== Buttons ========== */
+.btn{padding:10px 20px;border-radius:20px;border:none;font-size:.85rem;font-weight:600;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:6px}
+.btn-primary{background:var(--red);color:#fff}.btn-primary:hover{background:var(--red-dark);transform:translateY(-1px)}
+.btn-outline{background:#fff;color:var(--red);border:2px solid var(--red)}.btn-outline:hover{background:#fef0f1}
+.btn-sm{padding:6px 14px;font-size:.75rem}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+/* ========== Loading & States ========== */
+.loading-spin{display:inline-block;width:18px;height:18px;border:3px solid #e0dcd5;border-top-color:var(--red);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.state-msg{text-align:center;padding:30px 16px;color:var(--text2)}
+.state-msg .icon-big{font-size:2.5rem;margin-bottom:10px}
+.empty-state{text-align:center;padding:40px 16px}
+.empty-state .emoji{font-size:3rem;margin-bottom:10px}
+/* ========== Toast ========== */
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:10px 20px;border-radius:20px;font-size:.8rem;z-index:999;animation:fadeUp .3s}
+@keyframes fadeUp{from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+/* ========== Settings ========== */
+.settings-toggle{position:fixed;top:16px;right:16px;z-index:200;background:rgba(255,255,255,.2);border:none;color:#fff;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center}
+.settings-panel{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:300;justify-content:center;align-items:center}
+.settings-panel.show{display:flex}
+.settings-content{background:var(--card);border-radius:var(--radius);padding:24px;width:90%;max-width:400px;max-height:80vh;overflow-y:auto}
+.settings-content h3{margin-bottom:16px}
+.settings-content label{display:block;font-size:.8rem;font-weight:600;color:var(--text2);margin:12px 0 4px}
+.settings-content input{width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:.85rem}
+.settings-content .hint{font-size:.7rem;color:#999;margin-top:2px}
+/* ========== Footer ========== */
+.footer{text-align:center;padding:20px 16px 30px;font-size:.7rem;color:#999;line-height:1.8}
+.footer .warn{color:#c8963e;font-weight:600}
+/* ========== Responsive ========== */
+@media (max-width:480px){
+  .header h1{font-size:1.1rem}
+  .header{padding:12px 16px}
+  .container{padding:10px}
+  .tabs{top:90px}
+  .tab{font-size:.78rem;padding:8px 4px}
+  .ball{width:34px;height:34px;font-size:.85rem}
+  .ball.sm{width:28px;height:28px;font-size:.7rem}
+  .card{padding:14px}
+  .hero-rec{padding:16px}
+}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header class="header">
+  <h1>🎯 大乐透智能分析投注助手</h1>
+  <div class="sub">基于历史数据 · 多维度统计 · AI 辅助解读</div>
+  <div class="period" id="periodInfo">加载中...</div>
+</header>
+<button class="settings-toggle" onclick="toggleSettings()" title="设置">⚙</button>
+
+<!-- Settings Modal -->
+<div class="settings-panel" id="settingsPanel">
+  <div class="settings-content">
+    <h3>⚙ 设置</h3>
+    <label>DeepSeek API Key（可选）</label>
+    <input type="password" id="apiKeyInput" placeholder="sk-xxxxxxxxxxxxxxxx">
+    <div class="hint">填入后可启用 AI 智能分析。Key 仅保存在你的浏览器中。<br>获取地址：<a href="https://platform.deepseek.com" target="_blank">platform.deepseek.com</a></div>
+    <label>分析期数范围</label>
+    <input type="number" id="rangeInput" value="100" min="30" max="500" step="10">
+    <div class="hint">分析的近期期数，越大越全面（30-500）</div>
+    <div class="btn-row" style="margin-top:16px">
+      <button class="btn btn-primary btn-sm" onclick="saveSettings()">💾 保存设置</button>
+      <button class="btn btn-outline btn-sm" onclick="toggleSettings()">取消</button>
+    </div>
+  </div>
+</div>
+
+<!-- Main Container -->
+<div class="container">
+  <!-- Tabs -->
+  <nav class="tabs" id="tabNav">
+    <button class="tab active" data-tab="recommend">🎯 投注建议</button>
+    <button class="tab" data-tab="history">📋 历史数据</button>
+    <button class="tab" data-tab="trend">📊 走势分析</button>
+  </nav>
+
+  <!-- Panel: Recommend -->
+  <div class="panel active" id="panel-recommend">
+    <!-- loading -->
+    <div class="state-msg" id="recLoading"><div class="loading-spin"></div><p style="margin-top:12px">正在分析数据...</p></div>
+    <!-- content -->
+    <div id="recContent" style="display:none"></div>
+    <!-- AI Section -->
+    <div class="ai-section" id="aiSection">
+      <h4>🤖 DeepSeek AI 深度分析（可选）</h4>
+      <p style="font-size:.75rem;color:var(--text2);margin-bottom:8px">点击下方按钮，AI 将解读统计数据并给出策略建议</p>
+      <button class="btn btn-primary btn-sm" id="aiAnalyzeBtn" onclick="runAIAnalysis()">🧠 AI 分析</button>
+      <div class="ai-output" id="aiOutput" style="display:none"></div>
+    </div>
+  </div>
+
+  <!-- Panel: History -->
+  <div class="panel" id="panel-history">
+    <div class="state-msg" id="histLoading"><div class="loading-spin"></div><p style="margin-top:12px">正在加载历史数据...</p></div>
+    <div id="histContent" style="display:none"></div>
+  </div>
+
+  <!-- Panel: Trend -->
+  <div class="panel" id="panel-trend">
+    <div class="state-msg" id="trendLoading"><div class="loading-spin"></div><p style="margin-top:12px">正在生成走势图...</p></div>
+    <div id="trendContent" style="display:none"></div>
+  </div>
+</div>
+
+<!-- Footer -->
+<footer class="footer">
+  <p class="warn">⚠ 免责声明</p>
+  <p>彩票开奖是完全随机的过程。本工具的建议基于历史数据的统计分析，<br>仅供参考娱乐，不构成任何中奖承诺。请理性购彩，量力而行。</p>
+  <p style="margin-top:6px">数据来源：中国体彩官方 | DeepSeek AI 分析为可选功能</p>
+</footer>
+
+<script>
+// ==================== 全局状态 ====================
+const API_BASE = 'https://webapi.sporttery.cn/gateway/lottery/getHistoryPageListV1.qry';
+const API_HEADERS = {
+  'Accept': 'application/json',
+};
+const DEEPSEEK_API = 'https://api.deepseek.com/v1/chat/completions';
+const GAME_NO = '85';
+const CACHE_KEY = 'dlt_history_data';
+const CACHE_TIME_KEY = 'dlt_cache_time';
+const CACHE_DURATION = 6 * 60 * 60 * 1000; // 6 hours
+
+// 自动检测是否运行在本地服务器上（启动了 server.py）
+function isLocalServer() {
+  return window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+}
+
+function buildApiUrl(pageNo, pageSize) {
+  if (isLocalServer()) {
+    // 使用本地代理，无 CORS 问题
+    return `/api/lottery?gameNo=${GAME_NO}&provinceId=0&pageSize=${pageSize}&isVerify=1&pageNo=${pageNo}`;
+  }
+  return `${API_BASE}?gameNo=${GAME_NO}&provinceId=0&pageSize=${pageSize}&isVerify=1&pageNo=${pageNo}`;
+}
+
+let allDraws = [];
+let analysisResult = null;
+
+// ==================== 初始化 ====================
+document.addEventListener('DOMContentLoaded', async () => {
+  setupTabs();
+  loadSettings();
+  await loadData();
+  if (allDraws.length > 0) {
+    renderRecommend();
+    renderHistory();
+    renderTrend();
+  }
+});
+
+// ==================== Tab 切换 ====================
+function setupTabs() {
+  document.querySelectorAll('#tabNav .tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('#tabNav .tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
+    });
+  });
+}
+
+// ==================== 设置面板 ====================
+function toggleSettings() {
+  document.getElementById('settingsPanel').classList.toggle('show');
+}
+
+function loadSettings() {
+  const key = localStorage.getItem('deepseek_api_key') || '';
+  const range = localStorage.getItem('analysis_range') || '100';
+  document.getElementById('apiKeyInput').value = key;
+  document.getElementById('rangeInput').value = range;
+}
+
+function saveSettings() {
+  const key = document.getElementById('apiKeyInput').value.trim();
+  const range = parseInt(document.getElementById('rangeInput').value) || 100;
+  localStorage.setItem('deepseek_api_key', key);
+  localStorage.setItem('analysis_range', Math.min(500, Math.max(30, range)));
+  toggleSettings();
+  showToast('设置已保存 ✓');
+  // 如果数据已加载，重新分析
+  if (allDraws.length > 0) {
+    renderRecommend();
+    renderTrend();
+  }
+}
+
+// ==================== 数据加载 ====================
+async function loadData() {
+  // 尝试从缓存读取
+  const cached = getCachedData();
+  if (cached && cached.length > 0) {
+    allDraws = cached;
+    updatePeriodInfo();
+    return;
+  }
+
+  // 从 API 获取多页数据
+  try {
+    const range = parseInt(localStorage.getItem('analysis_range') || '100');
+    const pagesNeeded = Math.ceil(range / 30); // 30 per page
+    const draws = [];
+
+    for (let page = 1; page <= Math.min(pagesNeeded, 10); page++) {
+      const data = await fetchPage(page, 30);
+      if (data && data.list && data.list.length > 0) {
+        draws.push(...data.list);
+      }
+      if (page < Math.min(pagesNeeded, 10)) {
+        await sleep(300); // 避免请求过快
+      }
+    }
+
+    if (draws.length > 0) {
+      allDraws = draws;
+      cacheData(draws);
+      updatePeriodInfo();
+    } else {
+      showLoadError();
+    }
+  } catch (e) {
+    console.error('数据加载失败:', e);
+    // 尝试使用缓存
+    if (cached && cached.length > 0) {
+      allDraws = cached;
+      updatePeriodInfo();
+      showToast('网络加载失败，已使用缓存数据');
+    } else {
+      showLoadError();
+    }
+  }
+}
+
+async function fetchPage(pageNo, pageSize) {
+  const url = buildApiUrl(pageNo, pageSize);
+
+  // 本地服务器代理模式（无 CORS 问题）
+  if (isLocalServer()) {
+    try {
+      const resp = await fetch(url);
+      if (resp.ok) {
+        const json = await resp.json();
+        if (json.success && json.value) return json.value;
+      }
+    } catch (e) {
+      console.error('本地代理请求失败:', e);
+    }
+    return null;
+  }
+
+  // 在线模式：尝试直接请求
+  try {
+    const resp = await fetch(url, { headers: API_HEADERS });
+    if (resp.ok) {
+      const json = await resp.json();
+      if (json.success && json.value) return json.value;
+    }
+  } catch (e) {
+    console.warn('直接请求失败，尝试 CORS 代理...');
+  }
+
+  // 多代理回退
+  const proxies = [
+    (u) => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u),
+    (u) => 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u),
+  ];
+
+  for (const proxyFn of proxies) {
+    try {
+      const resp = await fetch(proxyFn(url));
+      if (resp.ok) {
+        const text = await resp.text();
+        try {
+          const json = JSON.parse(text);
+          if (json.success && json.value) return json.value;
+          if (json.value && json.value.list) return json.value;
+        } catch (parseErr) {}
+      }
+    } catch (e) {}
+  }
+
+  return null;
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ==================== 缓存 ====================
+function getCachedData() {
+  try {
+    const time = localStorage.getItem(CACHE_TIME_KEY);
+    if (time && (Date.now() - parseInt(time)) < CACHE_DURATION) {
+      const data = localStorage.getItem(CACHE_KEY);
+      if (data) return JSON.parse(data);
+    }
+  } catch (e) {}
+  return null;
+}
+
+function cacheData(draws) {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify(draws));
+    localStorage.setItem(CACHE_TIME_KEY, Date.now().toString());
+  } catch (e) {}
+}
+
+// ==================== 解析开奖号码 ====================
+function parseResult(resultStr) {
+  // "09 14 17 19 24 02 09" → {front: [9,14,17,19,24], back: [2,9]}
+  const parts = resultStr.trim().split(/\s+/).map(n => parseInt(n, 10));
+  return { front: parts.slice(0, 5), back: parts.slice(5, 7) };
+}
+
+// ==================== 统计分析引擎 ====================
+function analyze(draws, range) {
+  const recentDraws = draws.slice(0, range);
+  const allDrawsForMissing = draws.slice(0, Math.min(draws.length, 200));
+
+  // 1. 热号分析：近 N 期频次
+  const hotFront = countFreq(recentDraws, 'front');
+  const hotBack = countFreq(recentDraws, 'back');
+
+  // 2. 遗漏分析
+  const missingFront = calcMissing(allDrawsForMissing, 'front');
+  const missingBack = calcMissing(allDrawsForMissing, 'back');
+
+  // 3. 近期趋势（近10期）
+  const recent10 = recentDraws.slice(0, 10);
+  const trendFront = countFreq(recent10, 'front');
+  const trendBack = countFreq(recent10, 'back');
+
+  // 4. 区间分析（前区：1-12, 13-24, 25-35）
+  const zones = { zone1: 0, zone2: 0, zone3: 0 };
+  recentDraws.forEach(d => {
+    const p = parseResult(d.lotteryDrawResult);
+    p.front.forEach(n => {
+      if (n <= 12) zones.zone1++;
+      else if (n <= 24) zones.zone2++;
+      else zones.zone3++;
+    });
+  });
+  const totalZone = zones.zone1 + zones.zone2 + zones.zone3;
+  const zoneRatio = {
+    zone1: zones.zone1 / totalZone,
+    zone2: zones.zone2 / totalZone,
+    zone3: zones.zone3 / totalZone
+  };
+
+  // 5. 奇偶比统计
+  let oddEvenCounts = {};
+  recentDraws.forEach(d => {
+    const p = parseResult(d.lotteryDrawResult);
+    const odd = p.front.filter(n => n % 2 === 1).length;
+    const key = `${odd}:${5-odd}`;
+    oddEvenCounts[key] = (oddEvenCounts[key] || 0) + 1;
+  });
+
+  // 6. 连号统计
+  let consecCount = 0;
+  recentDraws.forEach(d => {
+    const p = parseResult(d.lotteryDrawResult);
+    const sorted = [...p.front].sort((a, b) => a - b);
+    for (let i = 1; i < sorted.length; i++) {
+      if (sorted[i] - sorted[i-1] === 1) consecCount++;
+    }
+  });
+
+  // 7. 重号统计（与上一期重复的号码数）
+  let repeatCounts = [];
+  for (let i = 0; i < recentDraws.length - 1; i++) {
+    const curr = parseResult(recentDraws[i].lotteryDrawResult);
+    const prev = parseResult(recentDraws[i+1].lotteryDrawResult);
+    const repeats = curr.front.filter(n => prev.front.includes(n)).length;
+    repeatCounts.push(repeats);
+  }
+  const avgRepeat = repeatCounts.length > 0 ? repeatCounts.reduce((a,b)=>a+b,0) / repeatCounts.length : 0;
+
+  // 8. 综合评分
+  const scoresFront = scoreNumbers(hotFront, missingFront, trendFront, zoneRatio, 35, recentDraws.length);
+  const scoresBack = scoreNumbers(hotBack, missingBack, trendBack, null, 12, recentDraws.length);
+
+  return {
+    hotFront, hotBack,
+    missingFront, missingBack,
+    trendFront, trendBack,
+    zoneRatio,
+    oddEvenCounts,
+    consecRate: consecCount / recentDraws.length,
+    avgRepeat,
+    scoresFront,
+    scoresBack,
+    range: recentDraws.length
+  };
+}
+
+function countFreq(draws, type) {
+  const max = type === 'front' ? 35 : 12;
+  const freq = {};
+  for (let i = 1; i <= max; i++) freq[i] = 0;
+  draws.forEach(d => {
+    const p = parseResult(d.lotteryDrawResult);
+    const nums = type === 'front' ? p.front : p.back;
+    nums.forEach(n => { freq[n]++; });
+  });
+  return freq;
+}
+
+function calcMissing(draws, type) {
+  const max = type === 'front' ? 35 : 12;
+  const missing = {};
+  for (let i = 1; i <= max; i++) {
+    let found = false;
+    for (let j = 0; j < draws.length; j++) {
+      const p = parseResult(draws[j].lotteryDrawResult);
+      const nums = type === 'front' ? p.front : p.back;
+      if (nums.includes(i)) { missing[i] = j; found = true; break; }
+    }
+    if (!found) missing[i] = draws.length;
+  }
+  return missing;
+}
+
+function scoreNumbers(hot, missing, trend, zoneRatio, max, totalDraws) {
+  const scores = {};
+  const hotMax = Math.max(...Object.values(hot), 1);
+  const missingMax = Math.max(...Object.values(missing), 1);
+  const trendMax = Math.max(...Object.values(trend), 1);
+
+  for (let i = 1; i <= max; i++) {
+    // 热号得分 (30%)
+    const hotScore = (hot[i] / hotMax) * 30;
+
+    // 遗漏得分 (20%) - 遗漏越久越值得关注
+    const missingScore = (missing[i] / missingMax) * 20;
+
+    // 近期趋势得分 (25%)
+    const trendScore = (trend[i] / trendMax) * 25;
+
+    // 区间得分 (15%) - 只对前区
+    let zoneScore = 0;
+    if (zoneRatio && max === 35) {
+      const historicIdeal = 1/3;
+      let zoneKey;
+      if (i <= 12) zoneKey = 'zone1';
+      else if (i <= 24) zoneKey = 'zone2';
+      else zoneKey = 'zone3';
+      // 实际占比低于理想值 → 该区间号码加权
+      const diff = historicIdeal - zoneRatio[zoneKey];
+      zoneScore = Math.max(0, diff * 45);
+    }
+
+    // 随机扰动 (10%) - 避免完全确定性
+    const randomScore = Math.random() * 10;
+
+    scores[i] = hotScore + missingScore + trendScore + zoneScore + randomScore;
+  }
+
+  return scores;
+}
+
+// ==================== 投注建议生成 ====================
+function generateRecommendations(analysis) {
+  const { scoresFront, scoresBack } = analysis;
+
+  // 单式推荐：前区最高分5个 + 后区最高分2个
+  const frontRanked = Object.entries(scoresFront)
+    .sort((a, b) => b[1] - a[1])
+    .map(e => parseInt(e[0]));
+  const backRanked = Object.entries(scoresBack)
+    .sort((a, b) => b[1] - a[1])
+    .map(e => parseInt(e[0]));
+
+  const singleFront = frontRanked.slice(0, 5).sort((a,b) => a-b);
+  const singleBack = backRanked.slice(0, 2).sort((a,b) => a-b);
+  const topScore = (scoresFront[frontRanked[0]] + scoresBack[backRanked[0]]).toFixed(1);
+
+  // 复式推荐：3套方案
+  const compounds = [
+    {
+      name: '热号优先',
+      tagClass: 'tag-hot',
+      front: frontRanked.slice(0, 7).sort((a,b) => a-b),
+      back: backRanked.slice(0, 3).sort((a,b) => a-b),
+      desc: '近期高频热号为主，适合追热策略'
+    },
+    {
+      name: '冷热均衡',
+      tagClass: 'tag-mix',
+      front: [
+        ...frontRanked.slice(0, 3),
+        ...frontRanked.slice(16, 19),
+        ...frontRanked.slice(32, 34)
+      ].filter((v,i,a) => a.indexOf(v)===i).slice(0,7).sort((a,b) => a-b),
+      back: backRanked.slice(0, 2).concat(backRanked.slice(5, 6)).sort((a,b) => a-b),
+      desc: '热号打底+冷号博补，攻守兼备'
+    },
+    {
+      name: '遗漏追击',
+      tagClass: 'tag-cold',
+      front: frontRanked.slice(-8).reverse().slice(0, 7).sort((a,b) => a-b),
+      back: backRanked.slice(-4).reverse().slice(0, 3).sort((a,b) => a-b),
+      desc: '重点关注遗漏期数长的号码，博冷门回补'
+    }
+  ];
+
+  return { singleFront, singleBack, topScore, compounds };
+}
+
+// ==================== 计算投注金额 ====================
+function calcCost(frontCount, backCount) {
+  // 大乐透复式：前区选m个，后区选n个
+  // 注数 = C(m,5) * C(n,2)，每注2元
+  function C(n, k) {
+    if (k > n) return 0;
+    let r = 1;
+    for (let i = 1; i <= k; i++) r = r * (n - i + 1) / i;
+    return Math.round(r);
+  }
+  return C(frontCount, 5) * C(backCount, 2) * 2;
+}
+
+// ==================== 渲染：投注建议 ====================
+function renderRecommend() {
+  document.getElementById('recLoading').style.display = 'none';
+  const container = document.getElementById('recContent');
+  container.style.display = 'block';
+
+  const range = parseInt(localStorage.getItem('analysis_range') || '100');
+  const actualRange = Math.min(range, allDraws.length);
+  analysisResult = analyze(allDraws, actualRange);
+  const rec = generateRecommendations(analysisResult);
+
+  let html = '';
+
+  // ── 单式推荐 Hero ──
+  html += `<div class="hero-rec">
+    <div class="label">🏆 综合评分最高 · 单式推荐</div>
+    <div class="numbers">`;
+  rec.singleFront.forEach(n => { html += `<span class="ball front">${String(n).padStart(2,'0')}</span>`; });
+  html += `<span class="divider">+</span>`;
+  rec.singleBack.forEach(n => { html += `<span class="ball back">${String(n).padStart(2,'0')}</span>`; });
+  html += `</div>
+    <div class="score-badge">综合评分 ${rec.topScore} 分 · 基于近 ${actualRange} 期数据</div>
+    <div style="font-size:.75rem;color:var(--text2);margin-top:6px">前区 ${rec.singleFront.join(' ')} ｜ 后区 ${rec.singleBack.join(' ')}</div>
+  </div>`;
+
+  // ── 复式推荐 ──
+  html += `<h3 style="margin:16px 0 10px">📦 小复式方案（3套）</h3>`;
+  rec.compounds.forEach((c, idx) => {
+    const cost = calcCost(c.front.length, c.back.length);
+    html += `<div class="card compound-card">
+      <h3><span class="tag ${c.tagClass}">${c.name}</span> 方案 ${idx+1}</h3>
+      <p style="font-size:.78rem;color:var(--text2);margin-bottom:8px">${c.desc}</p>
+      <div class="numbers" style="justify-content:flex-start">
+        <span style="font-size:.75rem;color:var(--text2);margin-right:6px">前区 ${c.front.length}码：</span>`;
+    c.front.forEach(n => { html += `<span class="ball front sm">${String(n).padStart(2,'0')}</span>`; });
+    html += `</div><div class="numbers" style="justify-content:flex-start;margin-top:4px">
+        <span style="font-size:.75rem;color:var(--text2);margin-right:6px">后区 ${c.back.length}码：</span>`;
+    c.back.forEach(n => { html += `<span class="ball back sm">${String(n).padStart(2,'0')}</span>`; });
+    html += `</div>
+      <div class="cost-badge">💰 投注金额：<strong>${cost} 元</strong>（${cost/2} 注 × 2元）</div>
+    </div>`;
+  });
+
+  // ── 策略说明 ──
+  html += `<div class="card" style="font-size:.8rem;line-height:1.8;color:var(--text2)">
+    <strong>📐 分析维度说明：</strong><br>
+    热号权重 30% · 遗漏追踪 20% · 近期趋势 25% · 区间均衡 15% · 随机扰动 10%<br>
+    数据范围：近 <strong>${actualRange}</strong> 期（共 ${allDraws.length} 期可用）
+  </div>`;
+
+  container.innerHTML = html;
+}
+
+// ==================== 渲染：历史数据 ====================
+function renderHistory() {
+  document.getElementById('histLoading').style.display = 'none';
+  const container = document.getElementById('histContent');
+  container.style.display = 'block';
+
+  const display = allDraws.slice(0, 50);
+  let html = `<div class="card" style="overflow-x:auto">
+    <h3>📋 最近 ${display.length} 期开奖记录</h3>
+    <table class="history-table"><thead><tr>
+      <th>期号</th><th>日期</th><th>前区号码</th><th>后区号码</th>
+    </tr></thead><tbody>`;
+
+  display.forEach(d => {
+    const p = parseResult(d.lotteryDrawResult);
+    html += `<tr>
+      <td><strong>${d.lotteryDrawNum}</strong></td>
+      <td>${d.lotteryDrawTime}</td>
+      <td><div class="ball-row">${p.front.map(n => `<span class="ball front sm">${String(n).padStart(2,'0')}</span>`).join('')}</div></td>
+      <td><div class="ball-row">${p.back.map(n => `<span class="ball back sm">${String(n).padStart(2,'0')}</span>`).join('')}</div></td>
+    </tr>`;
+  });
+
+  html += `</tbody></table></div>`;
+  container.innerHTML = html;
+}
+
+// ==================== 渲染：走势分析 ====================
+function renderTrend() {
+  document.getElementById('trendLoading').style.display = 'none';
+  const container = document.getElementById('trendContent');
+  container.style.display = 'block';
+
+  if (!analysisResult) {
+    const range = parseInt(localStorage.getItem('analysis_range') || '100');
+    analysisResult = analyze(allDraws, Math.min(range, allDraws.length));
+  }
+  const a = analysisResult;
+
+  let html = '';
+
+  // ── 前区热号柱状图 ──
+  html += `<div class="card"><h3>📊 前区号码频次（近${a.range}期）</h3><div class="chart-container">`;
+  const frontMax = Math.max(...Object.values(a.hotFront), 1);
+  for (let i = 1; i <= 35; i++) {
+    const pct = (a.hotFront[i] / frontMax * 100).toFixed(0);
+    const heatClass = pct > 60 ? 'fill-hot' : (pct > 30 ? 'fill-warm' : 'fill-cool');
+    html += `<div class="chart-row">
+      <span class="chart-label">${String(i).padStart(2,'0')}</span>
+      <div class="chart-bar-wrap"><div class="chart-bar-fill ${heatClass}" style="width:${pct}%"></div></div>
+      <span class="chart-val">${a.hotFront[i]}次</span>
+    </div>`;
+  }
+  html += `</div></div>`;
+
+  // ── 后区热号柱状图 ──
+  html += `<div class="card"><h3>📊 后区号码频次（近${a.range}期）</h3><div class="chart-container">`;
+  const backMax = Math.max(...Object.values(a.hotBack), 1);
+  for (let i = 1; i <= 12; i++) {
+    const pct = (a.hotBack[i] / backMax * 100).toFixed(0);
+    html += `<div class="chart-row">
+      <span class="chart-label">${String(i).padStart(2,'0')}</span>
+      <div class="chart-bar-wrap"><div class="chart-bar-fill fill-warm" style="width:${pct}%"></div></div>
+      <span class="chart-val">${a.hotBack[i]}次</span>
+    </div>`;
+  }
+  html += `</div></div>`;
+
+  // ── 遗漏情况 ──
+  html += `<div class="card"><h3>⏳ 前区遗漏期数 TOP10（最久未出）</h3>`;
+  const missingSorted = Object.entries(a.missingFront).sort((a,b) => b[1] - a[1]).slice(0, 10);
+  missingSorted.forEach((e, idx) => {
+    html += `<div class="missing-row">
+      <span class="pos">#${idx+1}</span>
+      <span class="ball front sm">${String(e[0]).padStart(2,'0')}</span>
+      <span style="flex:1;margin-left:10px">已遗漏 <strong>${e[1]}</strong> 期</span>
+    </div>`;
+  });
+  html += `</div>`;
+
+  // ── 统计概览 ──
+  const topOddEven = Object.entries(a.oddEvenCounts).sort((a,b) => b[1] - a[1]).slice(0, 3);
+  html += `<div class="card"><h3>📈 统计概览</h3>
+    <p style="font-size:.8rem;line-height:2">
+      <strong>奇偶比：</strong>最常见 ${topOddEven.map(e => `${e[0]}(${e[1]}次)`).join(' / ')}<br>
+      <strong>连号概率：</strong>平均每期 ${(a.consecRate*100).toFixed(0)}% 出现连号<br>
+      <strong>重号概率：</strong>平均每期 ${a.avgRepeat.toFixed(1)} 个号码与上期重复<br>
+      <strong>区间分布：</strong>1-12区 ${(a.zoneRatio.zone1*100).toFixed(1)}% / 13-24区 ${(a.zoneRatio.zone2*100).toFixed(1)}% / 25-35区 ${(a.zoneRatio.zone3*100).toFixed(1)}%
+    </p>
+  </div>`;
+
+  container.innerHTML = html;
+}
+
+// ==================== DeepSeek AI 分析 ====================
+async function runAIAnalysis() {
+  const apiKey = localStorage.getItem('deepseek_api_key') || '';
+  if (!apiKey) {
+    showToast('请先在设置中填写 DeepSeek API Key');
+    toggleSettings();
+    return;
+  }
+
+  const output = document.getElementById('aiOutput');
+  const btn = document.getElementById('aiAnalyzeBtn');
+  output.style.display = 'block';
+  output.className = 'ai-output loading';
+  output.textContent = '正在连接 DeepSeek AI 分析中...';
+  btn.disabled = true;
+
+  // 准备统计数据
+  if (!analysisResult) {
+    const range = parseInt(localStorage.getItem('analysis_range') || '100');
+    analysisResult = analyze(allDraws, Math.min(range, allDraws.length));
+  }
+  const a = analysisResult;
+  const rec = generateRecommendations(a);
+
+  const frontRanked = Object.entries(a.scoresFront).sort((a,b) => b[1]-a[1]).slice(0,10);
+  const backRanked = Object.entries(a.scoresBack).sort((a,b) => b[1]-a[1]).slice(0,5);
+
+  const prompt = `你是中国体彩大乐透的数据分析专家。请基于以下统计数据，为下一期（${allDraws[0] ? parseInt(allDraws[0].lotteryDrawNum)+1 : '未知'}期）提供投注策略分析。
+
+【基础规则】前区5/35 + 后区2/12，每周一、三、六开奖。
+
+【推荐号码】
+- 单式推荐：前区 [${rec.singleFront.join(' ')}] + 后区 [${rec.singleBack.join(' ')}]（综合评分 ${rec.topScore}）
+- 热号优先复式：前区 [${rec.compounds[0].front.join(' ')}] + 后区 [${rec.compounds[0].back.join(' ')}]
+- 冷热均衡复式：前区 [${rec.compounds[1].front.join(' ')}] + 后区 [${rec.compounds[1].back.join(' ')}]
+- 遗漏追击复式：前区 [${rec.compounds[2].front.join(' ')}] + 后区 [${rec.compounds[2].back.join(' ')}]
+
+【统计数据（近${a.range}期）】
+- 前区评分TOP10：${frontRanked.map(e => `${e[0]}号(${e[1].toFixed(1)}分)`).join('、')}
+- 后区评分TOP5：${backRanked.map(e => `${e[0]}号(${e[1].toFixed(1)}分)`).join('、')}
+- 遗漏最久前区：${Object.entries(a.missingFront).sort((a,b)=>b[1]-a[1]).slice(0,5).map(e=>`${e[0]}号(${e[1]}期)`).join('、')}
+- 奇偶比：${Object.entries(a.oddEvenCounts).sort((a,b)=>b[1]-a[1]).slice(0,3).map(e=>`${e[0]}(${e[1]}次)`).join(' / ')}
+- 区间分布：1-12区${(a.zoneRatio.zone1*100).toFixed(1)}%、13-24区${(a.zoneRatio.zone2*100).toFixed(1)}%、25-35区${(a.zoneRatio.zone3*100).toFixed(1)}%
+- 连号概率${(a.consecRate*100).toFixed(0)}%、平均重号${a.avgRepeat.toFixed(1)}个
+
+请从以下角度分析（控制在300字以内）：
+1. 推荐号码的合理性点评
+2. 三种复式策略分别适合什么情况
+3. 本期投注的核心策略建议
+4. 风险提醒（强调彩票的随机性）`;
+
+  try {
+    const resp = await fetch(DEEPSEEK_API, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        messages: [
+          { role: 'system', content: '你是彩票数据分析助手。回答简洁专业，承认随机性，不夸大预测准确性。每次回答都提醒理性购彩。' },
+          { role: 'user', content: prompt }
+        ],
+        temperature: 0.7,
+        max_tokens: 800
+      })
+    });
+
+    if (!resp.ok) {
+      const err = await resp.text();
+      throw new Error(`API 错误 (${resp.status}): ${err}`);
+    }
+
+    const data = await resp.json();
+    const reply = data.choices?.[0]?.message?.content || 'AI 未返回有效内容';
+    output.className = 'ai-output';
+    output.innerHTML = '<strong>🤖 DeepSeek AI 分析报告</strong>\n\n' + escapeHtml(reply);
+
+  } catch (e) {
+    output.className = 'ai-output';
+    output.innerHTML = `<span style="color:#d4243c">❌ 分析失败：${escapeHtml(e.message)}</span>
+      <div style="font-size:.7rem;margin-top:4px;color:#999">请检查 API Key 是否正确，以及网络连接是否正常</div>`;
+  }
+
+  btn.disabled = false;
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// ==================== 辅助 ====================
+function updatePeriodInfo() {
+  if (allDraws.length === 0) return;
+  const latest = allDraws[0];
+  const nextNum = parseInt(latest.lotteryDrawNum) + 1;
+  document.getElementById('periodInfo').textContent =
+    `最新：${latest.lotteryDrawNum}期（${latest.lotteryDrawTime}）｜ 下期预计：${nextNum}期`;
+}
+
+function showLoadError() {
+  const isOnline = !window.location.protocol.startsWith('file');
+  let hint;
+  if (isOnline) {
+    hint = '<p style="font-size:.78rem;color:#c8963e;margin-top:8px">💡 在线部署可能受 CORS 限制<br>建议<a href="index.html" download>下载此文件</a>到电脑，使用 <strong>start.bat</strong> 启动</p>';
+  } else {
+    hint = '<p style="font-size:.78rem;color:#c8963e;margin-top:8px">💡 Chrome 限制了本地文件网络请求<br>请运行 <strong>start.bat</strong> 启动本地服务器<br>或使用 <strong>Firefox</strong> 浏览器打开此文件</p>';
+  }
+  ['recLoading','histLoading','trendLoading'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = `<div class="empty-state"><div class="emoji">📡</div><p>数据加载失败</p>${hint}<button class="btn btn-primary btn-sm" onclick="location.reload()" style="margin-top:10px">🔄 刷新重试</button></div>`;
+  });
+}
+
+function showToast(msg) {
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.textContent = msg;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 2500);
+}
+
+// 点击设置面板外部关闭
+document.addEventListener('click', (e) => {
+  const panel = document.getElementById('settingsPanel');
+  if (e.target === panel) panel.classList.remove('show');
+});
+</script>
+</body>
+</html>
